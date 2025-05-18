@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>文件下载器</title>
+  <!-- 替换原内联style标签为外部链接 -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>国外文件下载器</h1>
+    
+    <!-- 新增使用说明区域 -->
+    <div class="intro">
+      <p style="color: #424242; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+        📌 使用说明：<br>
+        1. 在输入框粘贴文件直链（支持HTTP/HTTPS资源）<br>
+        2. 点击"开始下载到服务器"触发下载<br>
+        3. 下载过程中实时显示进度（百分比/已下载大小）<br>
+        4. 完成后自动记录，可点击"下载到本地"保存到电脑<br>
+      </p>
+    <div class="input-group">
+      <input type="text" id="urlInput" placeholder="输入下载直链">
+      <button id="downloadBtn">开始</button>
+    </div>
+    <div id="progressArea" style="display: none;">
+      <div class="progress-bar">
+        <div class="progress" id="progressBar"></div>
+      </div>
+      <!-- 新增总大小显示 -->
+      <div>进度：<span id="percent">0%</span> | 已下载：<span id="speed">0MB</span> | 总大小：<span id="totalSize">0MB</span></div>
+    </div>
+    <h3>下载记录</h3>
+    <div id="historyList"></div>
+  </div>
+
+  <!-- 新增底部版权信息 -->
+  <footer class="copyright">
+    <p style="text-align: center; color: #616161; font-size: 14px; margin: 20px 0;">
+      © 2025 国外文件下载器 · 若溪 版权所有 · 技术支持：小小若溪
+    </p>
+  </footer>
+
+  <script>
+    const urlInput = document.getElementById('urlInput');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const progressArea = document.getElementById('progressArea');
+    const progressBar = document.getElementById('progressBar');
+    const percentSpan = document.getElementById('percent');
+    const speedSpan = document.getElementById('speed');
+    const historyList = document.getElementById('historyList');
+
+    // 下载到服务器（修改为相对路径）
+    downloadBtn.addEventListener('click', async () => {
+      const url = urlInput.value.trim();
+      if (!url) {
+        // 显示自定义提示模态框
+        const inputAlertModal = document.getElementById('inputAlertModal');
+        inputAlertModal.style.display = 'flex';
+
+        // 确认按钮点击关闭模态框
+        document.querySelector('.input-alert-confirm-btn').onclick = () => {
+          inputAlertModal.style.display = 'none';
+        };
+
+        // 点击模态框背景关闭
+        inputAlertModal.onclick = (e) => {
+          if (e.target === inputAlertModal) {
+            inputAlertModal.style.display = 'none';
+          }
+        };
+        return;
+      }
+
+      try {
+        const response = await fetch('/download', {  // 改为相对路径
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        const { taskId } = await response.json();
+        progressArea.style.display = 'block';
+        trackProgress(taskId);
+      } catch (error) {
+        alert('请求失败：' + error.message);
+      }
+    });
+
+    // 跟踪进度（修改为相对路径）
+    function trackProgress(taskId) {
+      const interval = setInterval(async () => {
+        const response = await fetch(`/progress/${taskId}`);  // 改为相对路径
+        const progress = await response.json();
+        
+        if (progress.status === 'completed') {
+          clearInterval(interval);
+          percentSpan.textContent = '100%';
+          speedSpan.textContent = '完成';
+          progressBar.style.width = '100%';
+          // 完成时显示文件总大小（添加容错）
+          totalSizeSpan.textContent = `${progress.totalSize || '未知'} MB`;  // 若totalSize不存在则显示"未知"
+          loadHistory(); 
+        } else if (progress.status === 'failed') {
+          clearInterval(interval);
+          alert('下载失败');
+        } else {
+          const validPercent = Math.min(100, Math.max(0, progress.percent || 0));
+          progressBar.style.width = `${validPercent}%`;
+          percentSpan.textContent = `${validPercent}%`;
+          speedSpan.textContent = `${progress.speed || 0} MB/s`;
+          // 实时显示文件总大小（添加容错）
+          const totalMB = progress.total ? (progress.total / 1024 / 1024).toFixed(2) : '未知';  // 若total不存在则显示"未知"
+          totalSizeSpan.textContent = `${totalMB} MB`;
+        }
+      }, 500);
+    }
+
+    // 加载下载记录（修改为相对路径）
+    async function loadHistory() {
+      const response = await fetch('/history');  // 改为相对路径
+      const history = await response.json();
+
+      // 新增：状态映射（英文 -> 中文）
+      const statusMap = {
+        downloading: '下载异常(请删除重新下载)',
+        completed: '下载完成',
+        failed: '下载失败',
+        not_found: '未找到'
+      };
+
+      historyList.innerHTML = history.map(item => 
+        `<div class="history-item">
+          <p>文件名：${item.filename}</p>
+          <p>文件大小：${item.size || '未知'}</p>
+          <p>状态：${statusMap[item.status] || item.status}</p>  <!-- 使用映射后的中文状态 -->
+          <p>时间：${new Date(item.timestamp).toLocaleString()}</p>
+          ${item.status === 'completed' ? 
+            `<a href="/download-file/${encodeURIComponent(item.filename)}">下载到本地</a>` : ''}  <!-- 改为相对路径 -->
+          <button class="delete-btn" data-id="${item.id}">删除文件</button>
+        </div>`
+      ).join('');
+
+      // 绑定删除按钮点击事件
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const taskId = btn.dataset.id;
+          const deleteModal = document.getElementById('deleteModal');
+          const toast = document.getElementById('toast');
+
+          // 显示模态框
+          deleteModal.style.display = 'flex';
+
+          // 确认删除按钮点击
+          document.querySelector('.delete-confirm-btn').onclick = async () => {
+            try {
+              await fetch(`/delete-record/${taskId}`, { method: 'DELETE' });
+              // 显示成功提示
+              toast.style.display = 'block';
+              // 自动隐藏提示
+              setTimeout(() => { toast.style.display = 'none'; }, 2000);
+              // 刷新记录
+              loadHistory();
+            } catch (error) {
+              alert('删除失败：' + error.message);
+            }
+            // 关闭模态框
+            deleteModal.style.display = 'none';
+          };
+
+          // 取消按钮点击
+          document.querySelector('.delete-cancel-btn').onclick = () => {
+            deleteModal.style.display = 'none';
+          };
+
+          // 点击模态框背景关闭
+          deleteModal.onclick = (e) => {
+            if (e.target === deleteModal) {
+              deleteModal.style.display = 'none';
+            }
+          };
+        });
+      });
+    }
+
+    // 初始化加载记录
+    loadHistory();
+  </script>
+</body>
+</html>
+
+<!-- 自定义删除确认模态框 -->
+<div class="delete-modal" id="deleteModal">
+  <div class="delete-modal-content">
+    <h3>删除确认</h3>
+    <p>确定要删除这条记录并删除服务器文件吗？</p>
+    <div class="delete-modal-actions">
+      <button class="delete-cancel-btn">取消</button>
+      <button class="delete-confirm-btn">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- 操作成功提示框 -->
+<div class="toast" id="toast">删除成功！</div>
+
+  <script>
+    // 新增：初始化总大小元素（确保正确获取DOM节点）
+    const totalSizeSpan = document.getElementById('totalSize');
+  </script>
+
+<!-- 自定义输入为空提示模态框 -->
+<div class="input-alert-modal" id="inputAlertModal">
+  <div class="input-alert-modal-content">
+    <h3>提示</h3>
+    <p>请输入下载链接</p>
+    <div class="input-alert-modal-actions">
+      <button class="input-alert-confirm-btn">确认</button>
+    </div>
+  </div>
+</div>

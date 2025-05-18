@@ -1,0 +1,349 @@
+
+:root {
+  --primary-color: #2E7D32; /* 主色调（深绿色） */
+  --secondary-color: #F1F8E9; /* 辅助色（浅绿） */
+  --border-radius: 8px; /* 统一圆角 */
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background-color: #f5f5f5;
+}
+
+.container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 30px;
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+h1 {
+  color: var(--primary-color);
+  text-align: center;
+  margin-bottom: 30px;
+  font-weight: 600;
+}
+
+.input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+#urlInput {
+  width: 70%;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: var(--border-radius);
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+}
+
+#urlInput:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+#downloadBtn {
+  padding: 12px 24px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+#downloadBtn:hover {
+  background: #388E3C;
+  transform: translateY(-1px);
+}
+
+#downloadBtn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(46,125,50,0.2);
+}
+
+.progress-bar {
+  height: 12px;
+  background: #f0f0f0;
+  margin: 15px 0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.progress {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color) 0%, #4CAF50 100%);
+  width: 0%;
+  transition: width 0.5s ease-in-out;  // 原0.3s改为0.5s更平滑
+}
+
+#progressArea > div {
+  color: #616161;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+}
+
+h3 {
+  color: #212121;
+  margin: 30px 0 15px;
+  font-weight: 500;
+}
+
+.history-item {
+  padding: 16px 20px;
+  border: none;
+  border-radius: var(--border-radius);
+  margin: 8px 0;
+  background: var(--secondary-color);
+  transition: all 0.3s ease;
+}
+
+.history-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(46,125,50,0.1);
+}
+
+.history-item p {
+  margin: 8px 0;
+  color: #212121;
+}
+
+.history-item a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.history-item a:hover {
+  color: #388E3C;
+  text-decoration: underline;
+}
+
+.delete-btn {
+  margin-top: 10px;
+  padding: 6px 12px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.3s ease;
+}
+
+.delete-btn:hover {
+  background: #bb2d3b;
+}
+.intro {
+  background: var(--secondary-color);
+  padding: 16px 20px;
+  border-radius: var(--border-radius);
+  margin-bottom: 25px;
+  border-left: 4px solid var(--primary-color);
+}
+
+.intro p {
+  margin: 0;
+  color: #212121;
+}
+
+.copyright {
+  max-width: 800px;
+  margin: 0 auto 30px;
+  padding: 0 20px;
+}
+
+
+/* 移动端适配（屏幕宽度≤768px） */
+@media (max-width: 768px) {
+  .container {
+    max-width: 95%;  /* 缩小容器宽度 */
+    margin: 20px auto;
+    padding: 15px;  /* 减少内边距 */
+  }
+
+  h1 {
+    font-size: 20px;  /* 缩小标题字体 */
+    margin-bottom: 20px;
+  }
+
+  .input-group {
+    flex-direction: column;  /* 输入框和按钮垂直排列 */
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  #urlInput {
+    width: 100%;  /* 输入框占满宽度 */
+    padding: 10px 12px;  /* 减少输入框内边距 */
+    font-size: 14px;  /* 缩小输入字体 */
+  }
+
+  #downloadBtn {
+    padding: 10px 20px;  /* 减少按钮内边距 */
+    font-size: 14px;  /* 缩小按钮字体 */
+  }
+
+  .intro p {
+    font-size: 14px;  /* 缩小使用说明字体 */
+  }
+
+  .history-item {
+    padding: 12px 15px;  /* 减少历史项内边距 */
+    margin: 6px 0;
+  }
+
+  .history-item p {
+    font-size: 14px;  /* 缩小历史项文字 */
+    margin: 6px 0;
+  }
+
+  .delete-btn {
+    padding: 4px 8px;  /* 缩小删除按钮 */
+    font-size: 12px;
+  }
+}
+
+/* 自定义删除模态框 */
+.delete-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.delete-modal-content {
+  background: white;
+  padding: 24px;
+  border-radius: var(--border-radius);
+  min-width: 320px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+}
+
+.delete-modal h3 {
+  margin: 0 0 16px 0;
+  color: #212121;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.delete-modal p {
+  margin: 0 0 24px 0;
+  color: #616161;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.delete-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.delete-cancel-btn, .delete-confirm-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.delete-cancel-btn {
+  background: #f5f5f5;
+  color: #212121;
+}
+
+.delete-cancel-btn:hover {
+  background: #eeeeee;
+}
+
+.delete-confirm-btn {
+  background: var(--primary-color);
+  color: white;
+}
+
+.delete-confirm-btn:hover {
+  background: #388E3C;
+}
+
+/* 操作提示框 */
+.toast {
+  display: none;
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #4CAF50;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  animation: fadeInOut 2s ease-in-out forwards;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; top: 0; }
+  20% { opacity: 1; top: 20px; }
+  80% { opacity: 1; top: 20px; }
+  100% { opacity: 0; top: 0; }
+}
+
+/* 输入为空提示模态框样式（与删除模态框保持一致） */
+.input-alert-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.input-alert-modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  min-width: 300px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.input-alert-modal-actions {
+  margin-top: 20px;
+  text-align: right;
+}
+
+.input-alert-confirm-btn {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.input-alert-confirm-btn:hover {
+  background: #45a049;
+}
