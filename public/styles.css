@@ -30,7 +30,7 @@ body {
 .container {
   flex: 1;
   width: 90%;
-  max-width: 960px;  /* 从840px调整为960px，增大PC端显示宽度 */
+  max-width: 1000px;  /* 从840px调整为960px，增大PC端显示宽度 */
   margin: 2rem auto;
   padding: 2.5rem;
   background: white;

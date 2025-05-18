@@ -27,11 +27,12 @@ async function startDownload() {
         lastLoaded = loaded;
         lastTime = currentTime;
 
-        // 向主线程发送进度
+        // 向主线程发送进度（新增loaded字段）
         parentPort.postMessage({ 
           percent, 
           speed, 
           total, 
+          loaded,  // 新增：已下载字节数
           status: '下载中' 
         });
       }

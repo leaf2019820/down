@@ -39,6 +39,7 @@ downloadBtn.addEventListener('click', async () => {
   urlInput.value = '';
 
   // 批量启动下载任务
+  // 修改下载按钮点击事件中的任务创建逻辑
   for (const url of urls) {
     try {
       const response = await fetch('/download', {
@@ -46,10 +47,10 @@ downloadBtn.addEventListener('click', async () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url })
       });
-      const { taskId } = await response.json();
+      const { taskId, filename } = await response.json();  // 解构获取filename
       
-      // 创建新任务的DOM容器并添加到任务列表
-      const taskElement = createTaskElement(taskId);
+      // 创建任务元素时传递filename
+      const taskElement = createTaskElement(taskId, filename);
       activeTasksList.appendChild(taskElement);
       
       // 启动进度跟踪
@@ -110,7 +111,14 @@ function trackProgress(taskId, taskElement) {
       
       // 原有更新逻辑
       progressBar.style.width = `${progress.percent}%`;
-      percentSpan.textContent = `${progress.percent}%`;
+      
+      // 根据是否有total调整显示（新增逻辑）
+      if (progress.total > 0) {
+        percentSpan.textContent = `${progress.percent}%`;
+      } else {
+        const loadedMB = (progress.loaded / 1024 / 1024).toFixed(2);  // 转换为MB
+        percentSpan.textContent = `${loadedMB} MB`;
+      }
       speedSpan.textContent = `${progress.speed} MB/s`;
     }
   }, 500);
@@ -133,7 +141,7 @@ async function loadHistory() {
   historyList.innerHTML = history.map(item => 
     `<div class="history-item">
       <p>文件名：${item.filename}</p>
-      <p>文件大小：${item.size || '未知'}</p>
+      <p>文件大小：${item.size || '未知'}MB</p>
       <p>状态：${statusMap[item.status] || item.status}</p>
       <p>时间：${new Date(item.timestamp).toLocaleString()}</p>
       ${item.status === 'completed' ? `<a href="/download-file/${encodeURIComponent(item.filename)}">下载到本地</a>` : ''}
@@ -208,10 +216,12 @@ cancelBtn.addEventListener('click', async () => {
 loadHistory();
 
 
-function createTaskElement(taskId) {
+// 修改createTaskElement函数，接收filename参数
+function createTaskElement(taskId, filename) {
   const div = document.createElement('div');
   div.className = 'active-task';
   div.innerHTML = `
+    <p class="task-filename" style="font-weight: bold; margin-bottom: 8px;">当前文件：${filename}</p>  <!-- 新增文件名显示 -->
     <div class="progress-bar">
       <div class="progress" data-task-id="${taskId}"></div>
     </div>
