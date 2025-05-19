@@ -1,19 +1,13 @@
-// 初始化 DOM 元素引用
+// 初始化关键 DOM 元素引用（仅保留实际使用的）
 const urlInput = document.getElementById('urlInput');
 const downloadBtn = document.getElementById('downloadBtn');
-const progressArea = document.getElementById('progressArea');
-const progressBar = document.getElementById('progressBar');
-const percentSpan = document.getElementById('percent');
-const speedSpan = document.getElementById('speed');
 const historyList = document.getElementById('historyList');
-const cancelBtn = document.getElementById('cancelBtn');
-const etaSpan = document.getElementById('eta');
-const totalSizeSpan = document.getElementById('totalSize');
+const activeTasksList = document.getElementById('activeTasksList'); // 动态任务列表容器
 
-// 存储当前任务ID和定时器ID的变量
-const activeTasks = new Map(); // 键：taskId，值：{ intervalId, domElement }
+// 存储当前任务ID和定时器ID的变量（键：taskId，值：{ intervalId, domElement }）
+const activeTasks = new Map();
 
-// 下载按钮点击事件修改（关键修改点）
+// 下载按钮点击事件（核心逻辑）
 downloadBtn.addEventListener('click', async () => {
   const input = urlInput.value.trim();
   if (!input) {
@@ -35,11 +29,9 @@ downloadBtn.addEventListener('click', async () => {
     return;
   }
 
-  // 清空输入框
-  urlInput.value = '';
+  urlInput.value = ''; // 清空输入框
 
   // 批量启动下载任务
-  // 修改下载按钮点击事件中的任务创建逻辑
   for (const url of urls) {
     try {
       const response = await fetch('/download', {
@@ -47,9 +39,9 @@ downloadBtn.addEventListener('click', async () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url })
       });
-      const { taskId, filename } = await response.json();  // 解构获取filename
+      const { taskId, filename } = await response.json();
       
-      // 创建任务元素时传递filename
+      // 创建任务元素并添加到列表
       const taskElement = createTaskElement(taskId, filename);
       activeTasksList.appendChild(taskElement);
       
@@ -63,95 +55,87 @@ downloadBtn.addEventListener('click', async () => {
   }
 });
 
-// 新增输入提示函数（复用现有模态框）
+// 输入提示模态框（复用现有结构）
 function showInputAlert(message) {
   const inputAlertModal = document.getElementById('inputAlertModal');
   const alertContent = inputAlertModal.querySelector('p');
   alertContent.textContent = message;
   inputAlertModal.style.display = 'flex';
   
-  // 确认按钮点击事件
-  document.querySelector('.input-alert-confirm-btn').onclick = () => {
-    inputAlertModal.style.display = 'none';
-  };
-  
-  inputAlertModal.onclick = (e) => e.target === inputAlertModal && (inputAlertModal.style.display = 'none');
+  // 统一使用 addEventListener 绑定事件
+  const confirmBtn = inputAlertModal.querySelector('.input-alert-confirm-btn');
+  confirmBtn.addEventListener('click', () => inputAlertModal.style.display = 'none');
+  inputAlertModal.addEventListener('click', (e) => {
+    if (e.target === inputAlertModal) inputAlertModal.style.display = 'none';
+  });
 }
 
-// 跟踪进度逻辑
+// 进度跟踪逻辑（核心）
 function trackProgress(taskId, taskElement) {
-  const intervalId = setInterval(async () => {
+  return setInterval(async () => {
     const response = await fetch(`/progress/${taskId}`);
     const progress = await response.json();
     
+    // 从动态元素中获取子节点（避免全局变量）
     const percentSpan = taskElement.querySelector('.percent');
     const speedSpan = taskElement.querySelector('.speed');
     const progressBar = taskElement.querySelector('.progress');
-    const etaSpan = taskElement.querySelector('.eta');  // 新增：获取预计时间元素
-    const totalSizeSpan = taskElement.querySelector('.totalSize');  // 新增：获取总大小元素
+    const etaSpan = taskElement.querySelector('.eta');
+    const totalSizeSpan = taskElement.querySelector('.totalSize');
 
     if (progress.status === 'completed') {
-      clearInterval(intervalId);
+      clearInterval(this); // 清理定时器
       activeTasks.delete(taskId);
       taskElement.remove();
-      loadHistory();
-    } else {
-      // 新增：计算总大小（MB）
-      const totalSizeMB = progress.total ? (progress.total / 1024 / 1024).toFixed(2) : '未知';
-      // 新增：计算预计完成时间（eta）
-      const loadedBytes = (progress.percent / 100) * (progress.total || 0);
-      const remainingBytes = (progress.total || 0) - loadedBytes;
-      const speedBytesPerSecond = progress.speed * 1024 * 1024;  // 转换为字节/秒
-      const totalSeconds = speedBytesPerSecond > 0 ? 
-        Math.floor(remainingBytes / speedBytesPerSecond) : 0;
-
-      // 新增：将总秒数转换为小时/分钟/秒格式
-      let eta;
-      if (totalSeconds <= 0) {
-        eta = '未知';
-      } else {
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-        const parts = [];
-        if (hours > 0) parts.push(`${hours}小时`);
-        if (minutes > 0) parts.push(`${minutes}分钟`);
-        parts.push(`${seconds}秒`);
-        eta = parts.join('');
-      }
-
-      // 更新新增字段
-      totalSizeSpan.textContent = `${totalSizeMB}MB`;
-      etaSpan.textContent = eta;  // 使用格式化后的时间
-      
-      // 原有更新逻辑
-      progressBar.style.width = `${progress.percent}%`;
-      
-      // 根据是否有total调整显示（新增逻辑）
-      if (progress.total > 0) {
-        percentSpan.textContent = `${progress.percent}%`;
-      } else {
-        const loadedMB = (progress.loaded / 1024 / 1024).toFixed(2);  // 转换为MB
-        percentSpan.textContent = `${loadedMB} MB`;
-      }
-      speedSpan.textContent = `${progress.speed} MB/s`;
+      loadHistory(); // 刷新历史记录
+      return;
     }
+
+    // 计算总大小（MB）
+    const totalSizeMB = progress.total ? (progress.total / 1024 / 1024).toFixed(2) : '未知';
+    // 计算预计完成时间（直接使用 progress.loaded 避免冗余计算）
+    const remainingBytes = (progress.total || 0) - progress.loaded;
+    const speedBytesPerSecond = progress.speed * 1024 * 1024;
+    const totalSeconds = speedBytesPerSecond > 0 ? Math.floor(remainingBytes / speedBytesPerSecond) : 0;
+
+    // 格式化预计时间
+    let eta;
+    if (totalSeconds <= 0) {
+      eta = '未知';
+    } else {
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      const parts = [];
+      if (hours > 0) parts.push(`${hours}小时`);
+      if (minutes > 0) parts.push(`${minutes}分钟`);
+      parts.push(`${seconds}秒`);
+      eta = parts.join('');
+    }
+
+    // 更新界面
+    progressBar.style.width = `${progress.percent}%`;
+    totalSizeSpan.textContent = `${totalSizeMB}MB`;
+    etaSpan.textContent = eta;
+    speedSpan.textContent = `${progress.speed} MB/s`;
+    percentSpan.textContent = progress.total > 0 ? 
+      `${progress.percent}%` : 
+      `${(progress.loaded / 1024 / 1024).toFixed(2)} MB`;
   }, 500);
-  return intervalId;
 }
 
-// 加载下载记录逻辑
+// 加载下载历史（核心）
 async function loadHistory() {
   const response = await fetch('/history');
   const history = await response.json();
   
-  // 新增：判断历史记录是否为空
+  // 处理空历史状态
   if (history.length === 0) {
     historyList.innerHTML = '<div class="empty-history" style="color: #666; font-size: 14px; text-align: center; padding: 20px;">诶，下载记录怎么空了</div>';
     return;
   }
 
-  // 原有状态映射和渲染逻辑（保持不变）
+  // 渲染历史记录
   const statusMap = { 
     downloading: '下载中', 
     completed: '下载完成', 
@@ -159,28 +143,27 @@ async function loadHistory() {
     cancelled: '已取消', 
     not_found: '未找到' 
   };
-
-  historyList.innerHTML = history.map(item => 
-    `<div class="history-item">
+  historyList.innerHTML = history.map(item => `
+    <div class="history-item">
       <p>文件名：${item.filename}</p>
       <p>文件大小：${item.size || '未知'}MB</p>
       <p>状态：${statusMap[item.status] || item.status}</p>
       <p>时间：${new Date(item.timestamp).toLocaleString()}</p>
       ${item.status === 'completed' ? `<a href="/download-file/${encodeURIComponent(item.filename)}">下载到本地</a>` : ''}
       <button class="delete-btn" data-id="${item.id}">删除文件</button>
-    </div>`
-  ).join('');
+    </div>
+  `).join('');
 
-  // 原有删除按钮绑定逻辑（保持不变）
+  // 绑定删除按钮事件
   document.querySelectorAll('.delete-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const taskId = btn.dataset.id;
       const deleteModal = document.getElementById('deleteModal');
       const toast = document.getElementById('toast');
       deleteModal.style.display = 'flex';
-  
-      // 绑定确认按钮事件
-      document.querySelector('.delete-confirm-btn').onclick = async () => {
+
+      // 确认删除逻辑
+      const confirmDelete = async () => {
         try {
           await fetch(`/delete-record/${taskId}`, { method: 'DELETE' });
           toast.style.display = 'block';
@@ -191,60 +174,61 @@ async function loadHistory() {
         }
         deleteModal.style.display = 'none';
       };
-  
-      // 新增：绑定取消按钮事件
-      document.querySelector('.delete-cancel-btn').onclick = () => {
-        deleteModal.style.display = 'none';
-      };
-  
-      deleteModal.onclick = (e) => e.target === deleteModal && (deleteModal.style.display = 'none');
+
+      // 取消删除逻辑
+      const cancelDelete = () => deleteModal.style.display = 'none';
+
+      // 绑定事件（清理重复的 onclick 赋值）
+      document.querySelector('.delete-confirm-btn').addEventListener('click', confirmDelete);
+      document.querySelector('.delete-cancel-btn').addEventListener('click', cancelDelete);
+      deleteModal.addEventListener('click', (e) => e.target === deleteModal && cancelDelete());
     });
   });
 }
 
-// 取消按钮逻辑（修改部分）
-cancelBtn.addEventListener('click', async () => {
-  const cancelModal = document.getElementById('cancelModal');
-  cancelModal.style.display = 'flex';
+// 取消任务逻辑（核心）
+function bindCancelTaskEvent(taskId, cancelBtn) {
+  cancelBtn.addEventListener('click', async () => {
+    const cancelModal = document.getElementById('cancelModal');
+    cancelModal.style.display = 'flex';
 
-  document.getElementById('cancelModalConfirm').onclick = async () => {
-    try {
-      // 调用取消接口通知服务端终止工作线程
-      await fetch(`/cancel-download/${currentTaskId}`, { method: 'DELETE' });
-      
-      // 清理本地状态
-      clearInterval(progressInterval);
-      progressArea.style.display = 'none';
-      cancelBtn.style.display = 'none';
-      downloadBtn.disabled = false;
-      urlInput.value = '';
-      loadHistory();
-      
-      // 显示提示
-      const toast = document.getElementById('toast');
-      toast.textContent = '取消成功！';
-      toast.style.display = 'block';
-      setTimeout(() => toast.style.display = 'none', 2000);
-    } catch (error) {
-      alert(`取消失败：${error.message}`);
-    }
-    cancelModal.style.display = 'none';
-  };
+    // 确认取消逻辑
+    const confirmCancel = async () => {
+      try {
+        await fetch(`/cancel-download/${taskId}`, { method: 'DELETE' });
+        // 清理前端状态
+        const task = activeTasks.get(taskId);
+        clearInterval(task.intervalId);
+        activeTasks.delete(taskId);
+        task.domElement.remove();
+        loadHistory();
+        // 显示提示
+        const toast = document.getElementById('toast');
+        toast.textContent = '取消成功！';
+        toast.style.display = 'block';
+        setTimeout(() => toast.style.display = 'none', 2000);
+      } catch (error) {
+        alert(`取消失败：${error.message}`);
+      }
+      cancelModal.style.display = 'none';
+    };
 
-  document.getElementById('cancelModalCancel').onclick = () => cancelModal.style.display = 'none';
-  cancelModal.onclick = (e) => e.target === cancelModal && (cancelModal.style.display = 'none');
-});
+    // 取消取消逻辑
+    const cancelCancel = () => cancelModal.style.display = 'none';
 
-// 初始化加载记录
-loadHistory();
+    // 绑定事件（清理重复的 onclick 赋值）
+    document.getElementById('cancelModalConfirm').addEventListener('click', confirmCancel);
+    document.getElementById('cancelModalCancel').addEventListener('click', cancelCancel);
+    cancelModal.addEventListener('click', (e) => e.target === cancelModal && cancelCancel());
+  });
+}
 
-
-// 修改createTaskElement函数，接收filename参数
+// 创建任务元素（核心）
 function createTaskElement(taskId, filename) {
   const div = document.createElement('div');
   div.className = 'active-task';
   div.innerHTML = `
-    <p class="task-filename" style="font-weight: bold; margin-bottom: 8px;">当前文件：${filename}</p>  <!-- 新增文件名显示 -->
+    <p class="task-filename" style="font-weight: bold; margin-bottom: 8px;">当前文件：${filename}</p>
     <div class="progress-bar">
       <div class="progress" data-task-id="${taskId}"></div>
     </div>
@@ -257,39 +241,10 @@ function createTaskElement(taskId, filename) {
     </div>
   `;
 
-  // 新增：绑定单个任务的取消按钮事件
-  const cancelBtn = div.querySelector('.cancel-btn');
-  cancelBtn.addEventListener('click', async () => {
-    const taskId = cancelBtn.dataset.taskId;
-    const cancelModal = document.getElementById('cancelModal');
-    cancelModal.style.display = 'flex';
-
-    // 确认取消逻辑
-    document.getElementById('cancelModalConfirm').onclick = async () => {
-      try {
-        await fetch(`/cancel-download/${taskId}`, { method: 'DELETE' });
-        // 清理前端状态
-        clearInterval(activeTasks.get(taskId).intervalId);
-        activeTasks.delete(taskId);
-        div.remove();
-        loadHistory(); // 刷新历史记录
-        // 显示提示
-        const toast = document.getElementById('toast');
-        toast.textContent = '取消成功！';
-        toast.style.display = 'block';
-        setTimeout(() => toast.style.display = 'none', 2000);
-      } catch (error) {
-        alert(`取消失败：${error.message}`);
-      }
-      cancelModal.style.display = 'none';
-    };
-
-    // 取消按钮关闭模态框
-    document.getElementById('cancelModalCancel').onclick = () => {
-      cancelModal.style.display = 'none';
-    };
-    cancelModal.onclick = (e) => e.target === cancelModal && (cancelModal.style.display = 'none');
-  });
-
+  // 绑定取消按钮事件（提取为独立函数）
+  bindCancelTaskEvent(taskId, div.querySelector('.cancel-btn'));
   return div;
 }
+
+// 初始化加载历史记录
+loadHistory();

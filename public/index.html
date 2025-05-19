@@ -37,8 +37,14 @@
       <div class="progress-bar">
         <div class="progress" id="progressBar"></div>
       </div>
-      <div>已下载：<span id="percent">0%</span> | 速度：<span id="speed">0MB</span> | 预计完成：<span id="eta">未知</span> | 总大小：<span id="totalSize">0MB</span>
-        <button id="cancelBtn" style="display: none; margin-top: 10px; background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">取消并删除</button>
+      <!-- 原进度信息容器 -->
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">  <!-- 新增gap增加间距 -->
+        <!-- 左侧进度信息添加包裹层控制收缩 -->
+        <div style="flex-shrink: 1; max-width: calc(100% - 120px);">  <!-- 限制最大宽度（按钮约120px宽） -->
+          已下载：<span id="percent">0%</span> | 速度：<span id="speed">0MB</span> | 预计完成：<span id="eta">未知</span> | 总大小：<span id="totalSize">0MB</span>
+        </div>
+        <!-- 按钮禁止收缩 -->
+        <button id="cancelBtn" style="display: none; margin-top: 0; background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; flex-shrink: 0;">取消并删除</button>
       </div>
     </div>
     <h3>下载记录</h3>

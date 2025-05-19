@@ -27,12 +27,12 @@ async function startDownload() {
         lastLoaded = loaded;
         lastTime = currentTime;
 
-        // 向主线程发送进度（新增loaded字段）
+        // 向主线程发送进度
         parentPort.postMessage({ 
           percent, 
           speed, 
           total, 
-          loaded,  // 新增：已下载字节数
+          loaded, 
           status: '下载中' 
         });
       }
@@ -59,11 +59,11 @@ async function startDownload() {
       totalSize: fileSizeMB 
     });
 
-    // 延迟100ms退出，确保消息传递（可选优化）
+    // 延迟退出确保消息传递
     setTimeout(() => process.exit(0), 100);
   } catch (error) {
     parentPort.postMessage({ percent: 0, speed: 0, status: '下载失败' });
-    process.exit(1); // 工作线程异常退出
+    process.exit(1);
   }
 }
 
