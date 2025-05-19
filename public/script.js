@@ -129,19 +129,26 @@ function trackProgress(taskId, taskElement) {
 async function loadHistory() {
   const response = await fetch('/history');
   const history = await response.json();
-  // 新增"cancelled"状态映射
+  
+  // 新增：判断历史记录是否为空
+  if (history.length === 0) {
+    historyList.innerHTML = '<div class="empty-history" style="color: #666; font-size: 14px; text-align: center; padding: 20px;">诶，下载记录怎么空了</div>';
+    return;
+  }
+
+  // 原有状态映射和渲染逻辑（保持不变）
   const statusMap = { 
     downloading: '下载中', 
     completed: '下载完成', 
     failed: '下载失败', 
-    cancelled: '已取消',  // 新增
+    cancelled: '已取消', 
     not_found: '未找到' 
   };
 
   historyList.innerHTML = history.map(item => 
     `<div class="history-item">
       <p>文件名：${item.filename}</p>
-      <p>文件大小：${item.size || '未知'}MB</p>
+      <p>文件大小：${item.size || '未知'}</p>
       <p>状态：${statusMap[item.status] || item.status}</p>
       <p>时间：${new Date(item.timestamp).toLocaleString()}</p>
       ${item.status === 'completed' ? `<a href="/download-file/${encodeURIComponent(item.filename)}">下载到本地</a>` : ''}
@@ -149,6 +156,7 @@ async function loadHistory() {
     </div>`
   ).join('');
 
+  // 原有删除按钮绑定逻辑（保持不变）
   document.querySelectorAll('.delete-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const taskId = btn.dataset.id;
