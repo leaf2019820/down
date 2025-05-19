@@ -102,12 +102,27 @@ function trackProgress(taskId, taskElement) {
       const loadedBytes = (progress.percent / 100) * (progress.total || 0);
       const remainingBytes = (progress.total || 0) - loadedBytes;
       const speedBytesPerSecond = progress.speed * 1024 * 1024;  // 转换为字节/秒
-      const eta = speedBytesPerSecond > 0 ? 
-        `${Math.floor(remainingBytes / speedBytesPerSecond)}秒` : '未知';
+      const totalSeconds = speedBytesPerSecond > 0 ? 
+        Math.floor(remainingBytes / speedBytesPerSecond) : 0;
+
+      // 新增：将总秒数转换为小时/分钟/秒格式
+      let eta;
+      if (totalSeconds <= 0) {
+        eta = '未知';
+      } else {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        const parts = [];
+        if (hours > 0) parts.push(`${hours}小时`);
+        if (minutes > 0) parts.push(`${minutes}分钟`);
+        parts.push(`${seconds}秒`);
+        eta = parts.join('');
+      }
 
       // 更新新增字段
       totalSizeSpan.textContent = `${totalSizeMB}MB`;
-      etaSpan.textContent = eta;
+      etaSpan.textContent = eta;  // 使用格式化后的时间
       
       // 原有更新逻辑
       progressBar.style.width = `${progress.percent}%`;
@@ -148,7 +163,7 @@ async function loadHistory() {
   historyList.innerHTML = history.map(item => 
     `<div class="history-item">
       <p>文件名：${item.filename}</p>
-      <p>文件大小：${item.size || '未知'}</p>
+      <p>文件大小：${item.size || '未知'}MB</p>
       <p>状态：${statusMap[item.status] || item.status}</p>
       <p>时间：${new Date(item.timestamp).toLocaleString()}</p>
       ${item.status === 'completed' ? `<a href="/download-file/${encodeURIComponent(item.filename)}">下载到本地</a>` : ''}
