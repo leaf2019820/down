@@ -7,6 +7,133 @@ const activeTasksList = document.getElementById('activeTasksList'); // 动态任
 // 存储当前任务ID和定时器ID的变量（键：taskId，值：{ intervalId, domElement }）
 const activeTasks = new Map();
 
+// 用户状态管理
+const userState = {
+  isLoggedIn: false,
+  user: null,
+  token: null,
+
+  // 初始化用户状态
+  init() {
+    const token = localStorage.getItem('token');
+    if (token) {
+      this.token = token;
+      this.checkLoginStatus();
+    } else {
+      this.updateUI();
+      // 未登录时加载公共历史记录
+      loadHistory();
+    }
+  },
+
+  // 检查登录状态
+  async checkLoginStatus() {
+    try {
+      const response = await fetch('/api/auth/check', {
+        headers: {
+          'Authorization': 'Bearer ' + this.token
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        this.isLoggedIn = true;
+        this.user = data.user;
+        this.updateUI();
+        // 登录成功后加载用户历史记录
+        loadHistory();
+      } else {
+        this.logout();
+      }
+    } catch (error) {
+      console.error('检查登录状态失败:', error);
+      this.logout();
+    }
+  },
+
+  // 登录
+  async login(email, password) {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        this.token = data.token;
+        this.user = data.user;
+        this.isLoggedIn = true;
+        localStorage.setItem('token', this.token);
+        return { success: true };
+      } else {
+        return { success: false, error: data.error };
+      }
+    } catch (error) {
+      console.error('登录失败:', error);
+      return { success: false, error: '登录失败，请稍后重试' };
+    }
+  },
+
+  // 注册
+  async register(email, password, code) {
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password, code })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        return { success: true };
+      } else {
+        return { success: false, error: data.error };
+      }
+    } catch (error) {
+      console.error('注册失败:', error);
+      return { success: false, error: '注册失败，请稍后重试' };
+    }
+  },
+
+  // 登出
+  logout() {
+    this.token = null;
+    this.user = null;
+    this.isLoggedIn = false;
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('token'); // 同时清除 sessionStorage
+    this.updateUI();
+    // 登出后重新加载页面以完全清除状态
+    window.location.href = '/';
+  },
+
+  // 更新界面
+  updateUI() {
+    const authButtons = document.getElementById('authButtons');
+    const userInfo = document.getElementById('userInfo');
+    const username = document.getElementById('username');
+
+    if (this.isLoggedIn && this.user) {
+      // 显示用户信息
+      if (authButtons) authButtons.classList.add('d-none');
+      if (userInfo) userInfo.classList.remove('d-none');
+      if (username) username.textContent = this.user.email;
+    } else {
+      // 显示登录注册按钮
+      if (authButtons) authButtons.classList.remove('d-none');
+      if (userInfo) userInfo.classList.add('d-none');
+    }
+  }
+};
+
 // 初始化Bootstrap组件
 document.addEventListener('DOMContentLoaded', function() {
   // 初始化所有模态框
@@ -47,6 +174,59 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 });
 
+// 页面加载完成后初始化用户状态
+document.addEventListener('DOMContentLoaded', () => {
+  userState.init();
+  
+  // 绑定登出按钮事件
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      userState.logout();
+      showToast('已退出登录', 'success');
+    });
+  }
+});
+
+// 登录表单提交
+const loginForm = document.getElementById('loginForm');
+if (loginForm) {
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    const result = await userState.login(email, password);
+    if (result.success) {
+      showToast('登录成功', 'success');
+      // 登录成功后重定向到首页
+      window.location.href = '/';
+    } else {
+      showToast(result.error, 'error');
+    }
+  });
+}
+
+// 注册表单提交
+const registerForm = document.getElementById('registerForm');
+if (registerForm) {
+  registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const code = document.getElementById('verifyCode').value;
+
+    const result = await userState.register(email, password, code);
+    if (result.success) {
+      showToast('注册成功，请登录', 'success');
+      // 注册成功后重定向到登录页面
+      window.location.href = '/auth/login.html';
+    } else {
+      showToast(result.error, 'error');
+    }
+  });
+}
+
 // 下载按钮点击事件（核心逻辑）
 downloadBtn.addEventListener('click', async () => {
   const input = urlInput.value.trim();
@@ -71,15 +251,32 @@ downloadBtn.addEventListener('click', async () => {
 
   urlInput.value = ''; // 清空输入框
 
+  // 获取 token
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+  if (token) {
+    headers['Authorization'] = 'Bearer ' + token;
+  }
+
   // 批量启动下载任务
   for (const url of urls) {
     try {
+      console.log('开始下载:', url);
       const response = await fetch('/download', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers,
         body: JSON.stringify({ url })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '下载请求失败');
+      }
+
       const { taskId, filename } = await response.json();
+      console.log('下载任务创建成功:', { taskId, filename });
       
       // 创建任务元素并添加到列表
       const taskElement = createTaskElement(taskId, filename);
@@ -90,7 +287,7 @@ downloadBtn.addEventListener('click', async () => {
       activeTasks.set(taskId, { intervalId, domElement: taskElement });
     } catch (error) {
       console.error('下载请求失败:', error);
-      showToast('部分任务启动失败');
+      showToast(`下载失败: ${error.message}`, 'error');
     }
   }
 });
@@ -207,9 +404,27 @@ function trackProgress(taskId, taskElement) {
 // 加载下载历史（核心）
 async function loadHistory() {
   try {
-    const response = await fetch('/history');
-    const history = await response.json();
+    // 获取 token
+    const token = localStorage.getItem('token');
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    if (token) {
+      headers['Authorization'] = 'Bearer ' + token;
+    }
+
+    console.log('加载历史记录:', {
+      hasToken: !!token
+    });
+
+    const response = await fetch('/history', { headers });
     
+    if (!response.ok) {
+      throw new Error('获取历史记录失败');
+    }
+    
+    const history = await response.json();
+  
     if (history.length === 0) {
       historyList.innerHTML = `
         <div class="empty-history">
@@ -235,7 +450,7 @@ async function loadHistory() {
       const historyItem = document.createElement('div');
       historyItem.className = 'history-item';
       historyItem.innerHTML = `
-        <div class="history-info">
+      <div class="history-info">
           <p class="filename">
             <i class="bi bi-file-earmark"></i>
             ${item.filename}
@@ -258,19 +473,19 @@ async function loadHistory() {
                             'arrow-repeat'}"></i>
             ${statusMap[item.status] || item.status}
           </p>
-        </div>
-        <div class="history-actions">
-          ${item.status === 'completed' ? 
-            `<a href="/download-file/${encodeURIComponent(item.filename)}" class="download-link">
+      </div>
+      <div class="history-actions">
+        ${item.status === 'completed' ? 
+          `<a href="/download-file/${encodeURIComponent(item.filename)}" class="download-link">
               <i class="bi bi-download"></i>
               下载到本地
-            </a>` : 
-            ''}
-          <button class="delete-btn" data-id="${item.id}">
+          </a>` : 
+          ''}
+        <button class="delete-btn" data-id="${item.id}">
             <i class="bi bi-trash"></i>
             删除文件
-          </button>
-        </div>
+        </button>
+      </div>
       `;
       fragment.appendChild(historyItem);
     });
@@ -308,8 +523,29 @@ async function loadHistory() {
       // 绑定新的确认事件
       newConfirmBtn.addEventListener('click', async () => {
         try {
-          const response = await fetch(`/delete-record/${taskId}`, { method: 'DELETE' });
-          if (!response.ok) throw new Error('删除失败');
+          // 获取 token
+          const token = localStorage.getItem('token');
+          const headers = {
+            'Content-Type': 'application/json'
+          };
+          if (token) {
+            headers['Authorization'] = 'Bearer ' + token;
+          }
+
+          console.log('发送删除请求:', {
+            taskId,
+            hasToken: !!token
+          });
+
+          const response = await fetch(`/delete-record/${taskId}`, { 
+            method: 'DELETE',
+            headers: headers
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || '删除失败');
+          }
           
           // 先关闭模态框
           modal.hide();
@@ -320,6 +556,7 @@ async function loadHistory() {
             showToast('删除成功', 'success');
           }, 150);
         } catch (error) {
+          console.error('删除失败:', error);
           showToast(`删除失败：${error.message}`, 'error');
           modal.hide();
         }
@@ -425,9 +662,6 @@ function createTaskElement(taskId, filename) {
 
   return taskElement;
 }
-
-// 初始化加载历史记录
-loadHistory();
 
 // 初始化显示空状态
 if (activeTasks.size === 0) {

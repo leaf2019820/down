@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - 文件下载器</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 图标 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- 自定义样式 -->
+    <link href="../css/style.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand d-flex align-items-center text-primary" href="/">
+                <i class="fas fa-cloud-download-alt me-2"></i>
+                <span class="fw-bold">文件下载器</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center text-dark" href="/">
+                            <i class="fas fa-home me-1 text-primary"></i>首页
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center text-dark" href="https://rxstore24.cc/" target="_blank">
+                            <i class="fas fa-link me-1 text-primary"></i>小小若溪
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center text-dark" href="/about">
+                            <i class="fas fa-info-circle me-1 text-primary"></i>关于
+                        </a>
+                    </li>
+                </ul>
+                <!-- 未登录显示 -->
+                <div class="d-flex align-items-center" id="authButtons">
+                    <a class="btn btn-outline-primary btn-sm me-2" href="/auth/login.html">
+                        <i class="fas fa-sign-in-alt me-1"></i>登录
+                    </a>
+                    <a class="btn btn-primary btn-sm" href="/auth/register.html">
+                        <i class="fas fa-user-plus me-1"></i>注册
+                    </a>
+                </div>
+                <!-- 登录后显示 -->
+                <div class="d-flex align-items-center d-none" id="userInfo">
+                    <span class="text-dark me-3">
+                        <i class="fas fa-user me-1 text-primary"></i>
+                        <span id="username"></span>
+                    </span>
+                    <button class="btn btn-outline-primary btn-sm" id="logoutBtn">
+                        <i class="fas fa-sign-out-alt me-1"></i>退出
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 注册表单 -->
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h4 class="card-title text-center mb-4">
+                            <i class="fas fa-user-plus me-2"></i>注册账号
+                        </h4>
+                        <form id="registerForm">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">
+                                    <i class="fas fa-envelope me-2"></i>邮箱地址
+                                </label>
+                                <div class="input-group">
+                                    <input type="email" class="form-control" id="email" required>
+                                    <button type="button" class="btn btn-outline-primary" id="sendCodeBtn">
+                                        <i class="fas fa-paper-plane me-1"></i>获取验证码
+                                    </button>
+                                </div>
+                                <div class="form-text">我们将向此邮箱发送验证码</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="verifyCode" class="form-label">
+                                    <i class="fas fa-shield-alt me-2"></i>验证码
+                                </label>
+                                <input type="text" class="form-control" id="verifyCode" required 
+                                    maxlength="6" pattern="\d{6}" placeholder="请输入6位数字验证码">
+                                <div class="form-text">验证码5分钟内有效</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">
+                                    <i class="fas fa-lock me-2"></i>密码
+                                </label>
+                                <input type="password" class="form-control" id="password" required 
+                                    minlength="6" pattern="^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$">
+                                <div class="form-text">密码至少6位，必须包含字母和数字</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirmPassword" class="form-label">
+                                    <i class="fas fa-lock me-2"></i>确认密码
+                                </label>
+                                <input type="password" class="form-control" id="confirmPassword" required>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="agreeTerms" required>
+                                <label class="form-check-label" for="agreeTerms">
+                                    我已阅读并同意<a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">服务条款</a>
+                                </label>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-user-plus me-2"></i>注册
+                                </button>
+                                <a href="login.html" class="btn btn-outline-primary">
+                                    <i class="fas fa-sign-in-alt me-2"></i>返回登录
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 服务条款模态框 -->
+    <div class="modal fade" id="termsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-file-contract me-2"></i>服务条款
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>1. 服务说明</h6>
+                    <p>文件下载器是一个提供文件下载服务的工具，支持HTTP/HTTPS资源的下载。</p>
+                    
+                    <h6>2. 用户责任</h6>
+                    <p>用户在使用本服务时应当：</p>
+                    <ul>
+                        <li>遵守相关法律法规</li>
+                        <li>不得下载非法或侵权内容</li>
+                        <li>合理使用服务器资源</li>
+                        <li>保护账号安全</li>
+                    </ul>
+
+                    <h6>3. 服务限制</h6>
+                    <p>为了维护服务质量，我们对以下方面进行限制：</p>
+                    <ul>
+                        <li>单个文件大小不超过2GB</li>
+                        <li>同时下载任务数量有限制</li>
+                        <li>服务器文件保留时间不超过24小时</li>
+                    </ul>
+
+                    <h6>4. 隐私保护</h6>
+                    <p>我们重视用户隐私：</p>
+                    <ul>
+                        <li>仅收集必要的用户信息</li>
+                        <li>不会向第三方分享用户数据</li>
+                        <li>定期清理下载记录</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">我已阅读并同意</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示框 -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="toast" class="toast" role="alert">
+            <div class="toast-header">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong class="me-auto">提示</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body"></div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 自定义脚本 -->
+    <script src="../js/auth.js"></script>
+</body>
+</html> 
