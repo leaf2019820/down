@@ -7,6 +7,46 @@ const activeTasksList = document.getElementById('activeTasksList'); // 动态任
 // 存储当前任务ID和定时器ID的变量（键：taskId，值：{ intervalId, domElement }）
 const activeTasks = new Map();
 
+// 初始化Bootstrap组件
+document.addEventListener('DOMContentLoaded', function() {
+  // 初始化所有模态框
+  const modals = document.querySelectorAll('.modal');
+  modals.forEach(modal => {
+    new bootstrap.Modal(modal);
+  });
+
+  // 初始化Toast
+  const toastEl = document.getElementById('toast');
+  const toast = new bootstrap.Toast(toastEl, {
+    animation: true,
+    autohide: true,
+    delay: 3000
+  });
+
+  // 显示Toast的函数
+  window.showToast = function(message, type = 'success') {
+    const toastEl = document.getElementById('toast');
+    const toastBody = toastEl.querySelector('.toast-body');
+    toastBody.textContent = message;
+    
+    // 根据类型设置不同的背景色
+    if (type === 'success') {
+      toastEl.style.backgroundColor = '#22c55e';
+    } else if (type === 'error') {
+      toastEl.style.backgroundColor = '#ef4444';
+    } else if (type === 'warning') {
+      toastEl.style.backgroundColor = '#f59e0b';
+    }
+    
+    const toast = new bootstrap.Toast(toastEl, {
+      animation: true,
+      autohide: true,
+      delay: 3000
+    });
+    toast.show();
+  };
+});
+
 // 下载按钮点击事件（核心逻辑）
 downloadBtn.addEventListener('click', async () => {
   const input = urlInput.value.trim();
@@ -72,179 +112,329 @@ function showInputAlert(message) {
 
 // 进度跟踪逻辑（核心）
 function trackProgress(taskId, taskElement) {
-  return setInterval(async () => {
-    const response = await fetch(`/progress/${taskId}`);
-    const progress = await response.json();
-    
-    // 从动态元素中获取子节点（避免全局变量）
-    const percentSpan = taskElement.querySelector('.percent');
-    const speedSpan = taskElement.querySelector('.speed');
-    const progressBar = taskElement.querySelector('.progress');
-    const etaSpan = taskElement.querySelector('.eta');
-    const totalSizeSpan = taskElement.querySelector('.totalSize');
+  // 保存定时器 ID
+  const intervalId = setInterval(async () => {
+    try {
+      const response = await fetch(`/progress/${taskId}`);
+      if (!response.ok) throw new Error('获取进度失败');
+      
+      const progress = await response.json();
+      
+      // 从动态元素中获取子节点（避免全局变量）
+      const percentSpan = taskElement.querySelector('.percent');
+      const speedSpan = taskElement.querySelector('.speed');
+      const progressBar = taskElement.querySelector('.progress');
+      const etaSpan = taskElement.querySelector('.eta');
+      const totalSizeSpan = taskElement.querySelector('.totalSize');
 
-    if (progress.status === 'completed') {
-      clearInterval(this); // 清理定时器
-      activeTasks.delete(taskId);
-      taskElement.remove();
-      loadHistory(); // 刷新历史记录
-      return;
+      if (progress.status === 'completed') {
+        clearInterval(intervalId); // 显式清除当前定时器
+        activeTasks.delete(taskId);
+        taskElement.remove();
+        
+        // 检查是否还有其他任务
+        if (activeTasks.size === 0) {
+          // 如果没有其他任务，显示空状态
+          activeTasksList.innerHTML = `
+            <div class="empty-tasks text-center py-4">
+              <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
+              <p class="text-muted mt-2 mb-0">当前暂无下载任务</p>
+            </div>
+          `;
+        }
+        
+        loadHistory(); // 刷新历史记录
+        showToast('下载完成', 'success');
+        return;
+      }
+
+      // 计算总大小（MB）
+      const totalSizeMB = progress.total ? (progress.total / 1024 / 1024).toFixed(2) : '未知';
+      
+      // 计算预计完成时间
+      const remainingBytes = (progress.total || 0) - progress.loaded;
+      const speedBytesPerSecond = progress.speed * 1024 * 1024;
+      const totalSeconds = speedBytesPerSecond > 0 ? Math.floor(remainingBytes / speedBytesPerSecond) : 0;
+
+      // 格式化预计时间
+      let eta;
+      if (totalSeconds <= 0) {
+        eta = '未知';
+      } else {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        const parts = [];
+        if (hours > 0) parts.push(`${hours}小时`);
+        if (minutes > 0) parts.push(`${minutes}分钟`);
+        parts.push(`${seconds}秒`);
+        eta = parts.join('');
+      }
+
+      // 更新界面
+      let percent;
+      if (progress.total > 0) {
+        // 如果有总大小，计算百分比
+        percent = Math.min(100, Math.round((progress.loaded / progress.total) * 100));
+      } else {
+        // 如果没有总大小，显示已下载大小
+        percent = 0;
+      }
+
+      // 更新进度条（确保从0开始）
+      if (!progressBar.style.width || progressBar.style.width === '100%') {
+        progressBar.style.width = '0%';
+      }
+      progressBar.style.width = `${percent}%`;
+      progressBar.setAttribute('aria-valuenow', percent);
+      
+      // 更新其他信息
+      totalSizeSpan.textContent = `${totalSizeMB}MB`;
+      etaSpan.textContent = eta;
+      speedSpan.textContent = `${progress.speed} MB/s`;
+      percentSpan.textContent = progress.total > 0 ? 
+        `${percent}%` : 
+        `${(progress.loaded / 1024 / 1024).toFixed(2)} MB`;
+    } catch (error) {
+      console.error('获取进度失败:', error);
+      clearInterval(intervalId);
+      showToast('获取进度失败', 'error');
     }
-
-    // 计算总大小（MB）
-    const totalSizeMB = progress.total ? (progress.total / 1024 / 1024).toFixed(2) : '未知';
-    // 计算预计完成时间（直接使用 progress.loaded 避免冗余计算）
-    const remainingBytes = (progress.total || 0) - progress.loaded;
-    const speedBytesPerSecond = progress.speed * 1024 * 1024;
-    const totalSeconds = speedBytesPerSecond > 0 ? Math.floor(remainingBytes / speedBytesPerSecond) : 0;
-
-    // 格式化预计时间
-    let eta;
-    if (totalSeconds <= 0) {
-      eta = '未知';
-    } else {
-      const hours = Math.floor(totalSeconds / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-      const parts = [];
-      if (hours > 0) parts.push(`${hours}小时`);
-      if (minutes > 0) parts.push(`${minutes}分钟`);
-      parts.push(`${seconds}秒`);
-      eta = parts.join('');
-    }
-
-    // 更新界面
-    progressBar.style.width = `${progress.percent}%`;
-    totalSizeSpan.textContent = `${totalSizeMB}MB`;
-    etaSpan.textContent = eta;
-    speedSpan.textContent = `${progress.speed} MB/s`;
-    percentSpan.textContent = progress.total > 0 ? 
-      `${progress.percent}%` : 
-      `${(progress.loaded / 1024 / 1024).toFixed(2)} MB`;
   }, 500);
+  return intervalId; // 返回定时器 ID 供外部管理
 }
 
 // 加载下载历史（核心）
 async function loadHistory() {
-  const response = await fetch('/history');
-  const history = await response.json();
-  
-  // 处理空历史状态
-  if (history.length === 0) {
-    historyList.innerHTML = '<div class="empty-history" style="color: #666; font-size: 14px; text-align: center; padding: 20px;">诶，下载记录怎么空了</div>';
-    return;
-  }
+  try {
+    const response = await fetch('/history');
+    const history = await response.json();
+    
+    if (history.length === 0) {
+      historyList.innerHTML = `
+        <div class="empty-history">
+          <i class="bi bi-inbox"></i>
+          <p>暂无下载记录</p>
+        </div>
+      `;
+      return;
+    }
 
-  // 渲染历史记录
-  const statusMap = { 
-    downloading: '下载中', 
-    completed: '下载完成', 
-    failed: '下载失败', 
-    cancelled: '已取消', 
-    not_found: '未找到' 
-  };
-  historyList.innerHTML = history.map(item => `
-    <div class="history-item">
-      <p>文件名：${item.filename}</p>
-      <p>文件大小：${item.size || '未知'}MB</p>
-      <p>状态：${statusMap[item.status] || item.status}</p>
-      <p>时间：${new Date(item.timestamp).toLocaleString()}</p>
-      ${item.status === 'completed' ? `<a href="/download-file/${encodeURIComponent(item.filename)}">下载到本地</a>` : ''}
-      <button class="delete-btn" data-id="${item.id}">删除文件</button>
-    </div>
-  `).join('');
+    const statusMap = { 
+      downloading: '下载中', 
+      completed: '下载完成', 
+      failed: '下载失败', 
+      cancelled: '已取消', 
+      not_found: '未找到' 
+    };
 
-  // 绑定删除按钮事件
-  document.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const taskId = btn.dataset.id;
-      const deleteModal = document.getElementById('deleteModal');
-      const toast = document.getElementById('toast');
-      deleteModal.style.display = 'flex';
-
-      // 确认删除逻辑
-      const confirmDelete = async () => {
-        try {
-          await fetch(`/delete-record/${taskId}`, { method: 'DELETE' });
-          toast.style.display = 'block';
-          setTimeout(() => toast.style.display = 'none', 2000);
-          loadHistory();
-        } catch (error) {
-          alert('删除失败：' + error.message);
-        }
-        deleteModal.style.display = 'none';
-      };
-
-      // 取消删除逻辑
-      const cancelDelete = () => deleteModal.style.display = 'none';
-
-      // 绑定事件（清理重复的 onclick 赋值）
-      document.querySelector('.delete-confirm-btn').addEventListener('click', confirmDelete);
-      document.querySelector('.delete-cancel-btn').addEventListener('click', cancelDelete);
-      deleteModal.addEventListener('click', (e) => e.target === deleteModal && cancelDelete());
+    // 使用 DocumentFragment 提高性能
+    const fragment = document.createDocumentFragment();
+    
+    history.forEach(item => {
+      const historyItem = document.createElement('div');
+      historyItem.className = 'history-item';
+      historyItem.innerHTML = `
+        <div class="history-info">
+          <p class="filename">
+            <i class="bi bi-file-earmark"></i>
+            ${item.filename}
+          </p>
+          <p>
+            <i class="bi bi-hdd"></i>
+            文件大小：${item.size || '未知'}MB
+          </p>
+          <p>
+            <i class="bi bi-clock-history"></i>
+            时间：${new Date(item.timestamp).toLocaleString()}
+          </p>
+          <p>
+            <i class="bi bi-link-45deg"></i>
+            原地址：${item.url}
+          </p>
+          <p class="status ${item.status}">
+            <i class="bi bi-${item.status === 'completed' ? 'check-circle' : 
+                            item.status === 'failed' ? 'x-circle' : 
+                            'arrow-repeat'}"></i>
+            ${statusMap[item.status] || item.status}
+          </p>
+        </div>
+        <div class="history-actions">
+          ${item.status === 'completed' ? 
+            `<a href="/download-file/${encodeURIComponent(item.filename)}" class="download-link">
+              <i class="bi bi-download"></i>
+              下载到本地
+            </a>` : 
+            ''}
+          <button class="delete-btn" data-id="${item.id}">
+            <i class="bi bi-trash"></i>
+            删除文件
+          </button>
+        </div>
+      `;
+      fragment.appendChild(historyItem);
     });
-  });
+
+    // 清空并添加新内容
+    historyList.innerHTML = '';
+    historyList.appendChild(fragment);
+
+    // 移除旧的事件监听器
+    const oldHandler = historyList.getAttribute('data-delete-handler');
+    if (oldHandler) {
+      historyList.removeEventListener('click', window[oldHandler]);
+    }
+
+    // 创建新的事件处理函数
+    const handlerName = 'deleteHandler_' + Date.now();
+    window[handlerName] = async (e) => {
+      const deleteBtn = e.target.closest('.delete-btn');
+      if (!deleteBtn) return;
+
+      const taskId = deleteBtn.dataset.id;
+      const deleteModal = document.getElementById('deleteModal');
+      
+      // 获取或创建模态框实例
+      let modal = bootstrap.Modal.getInstance(deleteModal);
+      if (!modal) {
+        modal = new bootstrap.Modal(deleteModal);
+      }
+
+      // 移除旧的事件监听器
+      const oldConfirmBtn = document.getElementById('deleteModalConfirm');
+      const newConfirmBtn = oldConfirmBtn.cloneNode(true);
+      oldConfirmBtn.parentNode.replaceChild(newConfirmBtn, oldConfirmBtn);
+      
+      // 绑定新的确认事件
+      newConfirmBtn.addEventListener('click', async () => {
+        try {
+          const response = await fetch(`/delete-record/${taskId}`, { method: 'DELETE' });
+          if (!response.ok) throw new Error('删除失败');
+          
+          // 先关闭模态框
+          modal.hide();
+          
+          // 等待模态框完全关闭后再刷新历史记录
+          setTimeout(() => {
+            loadHistory();
+            showToast('删除成功', 'success');
+          }, 150);
+        } catch (error) {
+          showToast(`删除失败：${error.message}`, 'error');
+          modal.hide();
+        }
+      });
+
+      // 显示模态框
+      modal.show();
+    };
+
+    // 保存事件处理函数的引用
+    historyList.setAttribute('data-delete-handler', handlerName);
+    historyList.addEventListener('click', window[handlerName]);
+  } catch (error) {
+    console.error('加载历史记录失败:', error);
+    showToast('加载历史记录失败', 'error');
+  }
 }
 
 // 取消任务逻辑（核心）
 function bindCancelTaskEvent(taskId, cancelBtn) {
   cancelBtn.addEventListener('click', async () => {
     const cancelModal = document.getElementById('cancelModal');
-    cancelModal.style.display = 'flex';
+    const modal = new bootstrap.Modal(cancelModal);
+    modal.show();
 
     // 确认取消逻辑
     const confirmCancel = async () => {
       try {
-        await fetch(`/cancel-download/${taskId}`, { method: 'DELETE' });
+        const response = await fetch(`/cancel-download/${taskId}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('取消失败');
+        
         // 清理前端状态
         const task = activeTasks.get(taskId);
-        clearInterval(task.intervalId);
-        activeTasks.delete(taskId);
-        task.domElement.remove();
-        loadHistory();
-        // 显示提示
-        const toast = document.getElementById('toast');
-        toast.textContent = '取消成功！';
-        toast.style.display = 'block';
-        setTimeout(() => toast.style.display = 'none', 2000);
+        if (task) {
+          clearInterval(task.intervalId);
+          activeTasks.delete(taskId);
+          task.domElement.remove();
+          
+          // 如果删除后没有任务了，显示空状态
+          if (activeTasks.size === 0) {
+            activeTasksList.innerHTML = `
+              <div class="empty-tasks text-center py-4">
+                <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
+                <p class="text-muted mt-2 mb-0">当前暂无下载任务</p>
+              </div>
+            `;
+          }
+          
+          loadHistory();
+        }
+        
+        showToast('任务已取消', 'warning');
       } catch (error) {
-        alert(`取消失败：${error.message}`);
+        showToast(`取消失败：${error.message}`, 'error');
       }
-      cancelModal.style.display = 'none';
+      modal.hide();
     };
 
-    // 取消取消逻辑
-    const cancelCancel = () => cancelModal.style.display = 'none';
-
-    // 绑定事件（清理重复的 onclick 赋值）
-    document.getElementById('cancelModalConfirm').addEventListener('click', confirmCancel);
-    document.getElementById('cancelModalCancel').addEventListener('click', cancelCancel);
-    cancelModal.addEventListener('click', (e) => e.target === cancelModal && cancelCancel());
+    // 绑定确认按钮事件
+    const confirmBtn = document.getElementById('cancelModalConfirm');
+    const cancelBtn = document.getElementById('cancelModalCancel');
+    
+    // 移除旧的事件监听器
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    newConfirmBtn.addEventListener('click', confirmCancel);
+    
+    // 绑定取消按钮事件
+    cancelBtn.onclick = () => modal.hide();
   });
 }
 
 // 创建任务元素（核心）
 function createTaskElement(taskId, filename) {
-  const div = document.createElement('div');
-  div.className = 'active-task';
-  div.innerHTML = `
-    <p class="task-filename" style="font-weight: bold; margin-bottom: 8px;">当前文件：${filename}</p>
-    <div class="progress-bar">
-      <div class="progress" data-task-id="${taskId}"></div>
+  // 如果是第一个任务，清空任务列表（包括空状态提示）
+  if (activeTasks.size === 0) {
+    activeTasksList.innerHTML = '';
+  }
+
+  const taskElement = document.createElement('div');
+  taskElement.className = 'active-task';
+  taskElement.innerHTML = `
+    <div class="task-header">
+      <span class="task-filename">${filename}</span>
+      <button class="cancel-btn" data-task-id="${taskId}">
+        <i class="bi bi-x-circle me-1"></i>取消
+      </button>
     </div>
-    <div class="task-info">
-      已下载：<span class="percent">0%</span> | 
-      速度：<span class="speed">0MB</span> | 
-      预计完成：<span class="eta">未知</span> | 
-      总大小：<span class="totalSize">0MB</span> | 
-      <button class="cancel-btn" data-task-id="${taskId}">取消并删除</button>
+    <div class="progress-bar">
+      <div class="progress" style="width: 0%"></div>
+    </div>
+    <div class="progress-info">
+      <span>已下载：<span class="percent">0%</span></span>
+      <span>速度：<span class="speed">0MB/s</span></span>
+      <span>预计完成：<span class="eta">未知</span></span>
+      <span>总大小：<span class="totalSize">0MB</span></span>
     </div>
   `;
 
-  // 绑定取消按钮事件（提取为独立函数）
-  bindCancelTaskEvent(taskId, div.querySelector('.cancel-btn'));
-  return div;
+  // 绑定取消按钮事件
+  const cancelBtn = taskElement.querySelector('.cancel-btn');
+  bindCancelTaskEvent(taskId, cancelBtn);
+
+  return taskElement;
 }
 
 // 初始化加载历史记录
 loadHistory();
+
+// 初始化显示空状态
+if (activeTasks.size === 0) {
+  activeTasksList.innerHTML = `
+    <div class="empty-tasks text-center py-4">
+      <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
+      <p class="text-muted mt-2 mb-0">当前暂无下载任务</p>
+    </div>
+  `;
+}

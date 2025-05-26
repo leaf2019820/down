@@ -2,97 +2,224 @@
 <html>
 <head>
   <title>文件下载器</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- 自定义样式 -->
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-  <!-- 顶部固定导航栏 -->
-  <nav class="navbar">
-    <div class="navbar-content">
-      <a href="/" class="navbar-logo">文件下载器</a>
-      <div class="navbar-links">
-        <a href="https://rxstore24.cc/" class="navbar-link" target="_blank">小小若溪</a>
-        <a href="/about" class="navbar-link">关于</a>
+<body class="bg-light">
+  <!-- 导航栏 -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+    <div class="container-fluid px-4">
+      <a class="navbar-brand d-flex align-items-center" href="/">
+        <i class="bi bi-cloud-download-fill text-primary me-2"></i>
+        <span class="fw-bold">文件下载器</span>
+      </a>
+      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto align-items-center">
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" href="https://rxstore24.cc/" target="_blank">
+              <i class="bi bi-link-45deg me-1"></i>小小若溪
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link d-flex align-items-center" href="/about">
+              <i class="bi bi-info-circle me-1"></i>关于
+            </a>
+          </li>
+        </ul>
       </div>
     </div>
   </nav>
-  <div class="container">
-    <h1>文件下载器</h1>
-    
-    <div class="intro">
-      <p style="color: #424242; font-size: 16px; line-height: 1.6; margin-bottom: 0;">
-        📌 使用说明：<br>
-        1. 在输入框粘贴文件直链（支持HTTP/HTTPS资源）-->
-        2. 点击"开始"触发下载-->
-        3. 完成后自动记录，可点击"下载到本地"保存到电脑-->
-        4. 支持批量下载（每行一个直链地址）
-      </p>
-    </div>
-    <div class="input-group">
-      <textarea id="urlInput" placeholder="输入下载直链（示例：https://download.jetbrains.com/idea/ideaIU-2024.3.5.exe）" rows="3"></textarea>
-      <button id="downloadBtn">开始</button>
-    </div>
-    <!-- 原progressArea修改为任务列表容器 -->
-    <div id="activeTasksList" style="margin: 20px 0;"></div>
-    <div id="progressArea" style="display: none;">
-      <div class="progress-bar">
-        <div class="progress" id="progressBar"></div>
-      </div>
-      <!-- 原进度信息容器 -->
-      <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">  <!-- 新增gap增加间距 -->
-        <!-- 左侧进度信息添加包裹层控制收缩 -->
-        <div style="flex-shrink: 1; max-width: calc(100% - 120px);">  <!-- 限制最大宽度（按钮约120px宽） -->
-          已下载：<span id="percent">0%</span> | 速度：<span id="speed">0MB</span> | 预计完成：<span id="eta">未知</span> | 总大小：<span id="totalSize">0MB</span>
+
+  <div class="container-fluid px-4 py-3">
+    <div class="row g-4">
+      <!-- 左侧：使用说明 -->
+      <div class="col-12 col-md-4 col-lg-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-header bg-white">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-info-circle-fill text-primary me-2"></i>使用说明
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="usage-steps">
+              <div class="step mb-3">
+                <i class="bi bi-1-circle-fill text-primary me-2"></i>
+                <span>在输入框粘贴文件直链（支持HTTP/HTTPS资源）</span>
+              </div>
+              <div class="step mb-3">
+                <i class="bi bi-2-circle-fill text-primary me-2"></i>
+                <span>点击"开始下载"触发下载任务</span>
+              </div>
+              <div class="step mb-3">
+                <i class="bi bi-3-circle-fill text-primary me-2"></i>
+                <span>完成后自动记录，可点击"下载到本地"保存</span>
+              </div>
+              <div class="step">
+                <i class="bi bi-4-circle-fill text-primary me-2"></i>
+                <span>支持批量下载（每行一个直链地址）</span>
+              </div>
+            </div>
+            <!-- 注意事项 -->
+            <div class="mt-4 pt-3 border-top">
+              <h6 class="text-danger mb-3">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>注意事项
+              </h6>
+              <div class="small text-muted">
+                <p class="mb-2"><i class="bi bi-dot me-1"></i>服务器资源有限，请勿同时下载过多文件</p>
+                <p class="mb-2"><i class="bi bi-dot me-1"></i>单个文件大小建议不超过2GB</p>
+                <p class="mb-2"><i class="bi bi-dot me-1"></i>下载完成后请及时保存到本地</p>
+                <p class="mb-2"><i class="bi bi-dot me-1"></i>服务器文件保留时间不超过24小时</p>
+                <p class="mb-2"><i class="bi bi-dot me-1"></i>服务器会定时清理文件</p>
+                <p class="mb-2"><i class="bi bi-dot me-1"></i>请勿用于下载非法或侵权内容</p>
+              </div>
+            </div>
+            <!-- 作者信息 -->
+            <div class="mt-4 pt-3 border-top">
+              <h6 class="text-primary mb-3">
+                <i class="bi bi-person-circle me-2"></i>关于作者
+              </h6>
+              <div class="small text-muted">
+                <p class="mb-2"><i class="bi bi-github me-2"></i>GitHub：<a href="https://github.com/leaf2019820" target="_blank" class="text-decoration-none">leaf2019820</a></p>
+                <p class="mb-2"><i class="bi bi-envelope me-2"></i>邮箱：rx142536@gmail.com</p>
+                <p class="mb-2"><i class="bi bi-globe me-2"></i>博客：<a href="https://rxstore24.cc/" target="_blank" class="text-decoration-none">rxstore24.cc</a></p>
+                <p class="mb-0"><i class="bi bi-heart-fill text-danger me-2"></i>感谢您的使用和支持</p>
+              </div>
+            </div>
+          </div>
         </div>
-        <!-- 按钮禁止收缩 -->
-        <button id="cancelBtn" style="display: none; margin-top: 0; background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; flex-shrink: 0;">取消并删除</button>
+      </div>
+
+      <!-- 中间：输入区域和当前任务 -->
+      <div class="col-12 col-md-8 col-lg-6">
+        <!-- 输入区域 -->
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <div class="input-group mb-3">
+              <textarea id="urlInput" class="form-control" rows="3" style="min-height: 100px; resize: vertical;"
+                placeholder="输入下载直链（每行一个，支持HTTP/HTTPS资源）&#10;示例：https://download.jetbrains.com/idea/ideaIU-2024.3.5.exe"></textarea>
+            </div>
+            <button id="downloadBtn" class="btn btn-primary w-100">
+              <i class="bi bi-cloud-download me-2"></i>开始下载
+            </button>
+          </div>
+        </div>
+
+        <!-- 当前任务列表 -->
+        <div class="card shadow-sm">
+          <div class="card-header bg-white">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-list-task text-primary me-2"></i>当前任务
+            </h5>
+          </div>
+          <div class="card-body">
+            <div id="activeTasksList" class="overflow-auto" style="max-height: 450px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧：下载历史 -->
+      <div class="col-12 col-md-4 col-lg-3">
+        <div class="card shadow-sm history-card">
+          <div class="card-header bg-white">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-clock-history text-primary me-2"></i>下载记录
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div id="historyList" class="history-list"></div>
+          </div>
+        </div>
       </div>
     </div>
-    <h3>下载记录</h3>
-    <div id="historyList"></div>
   </div>
 
-  <footer class="copyright">
-    <p style="text-align: center; font-size: 14px;">
-      © 2025 文件下载器 · 若溪 版权所有 · 技术支持：小小若溪
-    </p>
+  <!-- 页脚 -->
+  <footer class="py-3 mt-auto">
+    <div class="container-fluid text-center">
+      <p class="text-muted mb-0">© 2025 文件下载器 · 若溪 版权所有 · 技术支持：小小若溪</p>
+    </div>
   </footer>
 
-  <!-- 模态框和提示框 -->
-  <div class="delete-modal" id="deleteModal">
-    <div class="delete-modal-content">
-      <h3>删除确认</h3>
-      <p>确定要删除这条记录并删除服务器文件吗？</p>
-      <div class="delete-modal-actions">
-        <button class="delete-cancel-btn">取消</button>
-        <button class="delete-confirm-btn">确认删除</button>
+  <!-- 模态框 -->
+  <div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>删除确认
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>确定要删除这条记录并删除服务器文件吗？</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="deleteModalCancel" data-bs-dismiss="modal">取消</button>
+          <button type="button" class="btn btn-danger" id="deleteModalConfirm">确认删除</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="toast" id="toast">删除成功！</div>
-
-  <div class="input-alert-modal" id="inputAlertModal">
-    <div class="input-alert-modal-content">
-      <h3>提示</h3>
-      <p>请输入下载链接</p>
-      <div class="input-alert-modal-actions">
-        <button class="input-alert-confirm-btn">确认</button>
+  <!-- 输入提示模态框 -->
+  <div class="modal fade" id="inputAlertModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-info-circle-fill text-primary me-2"></i>提示
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>请输入下载链接</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">确认</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="delete-modal" id="cancelModal">
-    <div class="delete-modal-content">
-      <h3>取消确认</h3>
-      <p>确定要取消当前下载并删除已下载文件吗？</p>
-      <div class="delete-modal-actions">
-        <button class="delete-cancel-btn" id="cancelModalCancel">取消</button>
-        <button class="delete-confirm-btn" id="cancelModalConfirm">确认取消</button>
+  <!-- 取消确认模态框 -->
+  <div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>取消确认
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>确定要取消当前下载并删除已下载文件吗？</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelModalCancel" data-bs-dismiss="modal">取消</button>
+          <button type="button" class="btn btn-danger" id="cancelModalConfirm">确认取消</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- 引入外部 JS 文件（放在 body 末尾确保 DOM 加载完成） -->
+  <!-- Toast提示 -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="toast" class="toast" role="alert">
+      <div class="toast-body"></div>
+    </div>
+  </div>
+
+  <!-- Bootstrap Bundle with Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- 自定义脚本 -->
   <script src="script.js"></script>
 </body>
 </html>

@@ -16,7 +16,6 @@ async function startDownload() {
       onDownloadProgress: (progressEvent) => {
         const total = progressEvent.total || 0;
         const loaded = progressEvent.loaded;
-        const percent = Math.round((loaded / total) * 100);
         
         // 计算实时网速（MB/s）
         const currentTime = Date.now();
@@ -26,6 +25,12 @@ async function startDownload() {
         
         lastLoaded = loaded;
         lastTime = currentTime;
+
+        // 计算下载百分比
+        let percent = 0;
+        if (total > 0) {
+          percent = Math.min(100, Math.round((loaded / total) * 100));
+        }
 
         // 向主线程发送进度
         parentPort.postMessage({ 
